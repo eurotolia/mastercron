@@ -80,6 +80,13 @@ class Event implements PingableInterface
      * @var Process
      */
     protected $process;
+    
+    /**
+	 * Unique id of task
+	 *
+	 * @var Process
+	 */
+	protected $uid;
 
     /**
      * The cron expression representing the event's frequency.
@@ -1315,20 +1322,48 @@ class Event implements PingableInterface
         return $store;
     }
 
-    private function lockKey(): string
-    {
-        if ($this->isClosure()) {
-            /** @var \Closure $closure */
-            $closure = $this->command;
-            $command = $this->closureSerializer()
-                ->closureCode($closure)
-            ;
-        } else {
-            $command = $this->buildCommand();
-        }
+    /**
+	 * @param $name
+	 */
+	public function setUid($name)
+	{
+		$this->uid = md5($name);
+	}
 
-        return 'crunz-' . \md5($command);
-    }
+	/**
+	 * @return string|null
+	 */
+	public function getUid()
+	{
+		if (empty($this->uid))
+		{
+			return null;
+		}
+
+		return $this->uid;
+	}
+    
+   private function lockKey(): string
+	{
+		if ($this->isClosure())
+		{
+			/** @var \Closure $closure */
+			$closure = $this->command;
+			$command = $this->closureSerializer()
+			                ->closureCode($closure);
+		}
+		else
+		{
+			$command = $this->buildCommand();
+		}
+
+		if (empty($this->getUid()))
+		{
+			return 'crunz-' . md5($command);
+		}
+
+		return 'crunz-' . md5($command) . "-" . $this->getUid();
+	}
 
     private function checkLockFactory(): void
     {
